@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include "Gestion.h"
 #include <limits.h>
+#include"custom_app.h"
 
 // Définitions pour la configuration des capteurs
 #define ALGO_FREQ 50U
@@ -31,7 +32,7 @@ static int validMovements = 0;
 static int invalidMovements = 0;
 
 
-int _write(int file, char *ptr, int len) {
+int _write2(int file, char *ptr, int len) {
     int DataIdx;
     for (DataIdx = 0; DataIdx < len; DataIdx++) {
         ITM_SendChar(*ptr++);
@@ -65,6 +66,7 @@ void MX_MEMS_Process(void) {
                 break; // Sortie si aucun mouvement n'est détecté dans le délai imparti
             }
             isReferenceMovementRecorded = true;
+            BLE_MVT_REF();
             printf("Mouvement de référence enregistré.\n");
         } else {
             printf("Enregistrement d'une nouvelle répétition...\n");

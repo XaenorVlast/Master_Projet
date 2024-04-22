@@ -1,6 +1,6 @@
 ################################################################################
 # Automatically-generated file. Do not edit!
-# Toolchain: GNU Tools for STM32 (11.3.rel1)
+# Toolchain: GNU Tools for STM32 (12.3.rel1)
 ################################################################################
 
 ELF_SRCS := 
@@ -32,4 +32,14 @@ Drivers/BSP/Components/lsm6dso \
 Drivers/BSP/Components/stts751 \
 Drivers/BSP/IKS01A3 \
 Drivers/STM32WBxx_HAL_Driver/Src \
+Middlewares/ST/STM32_WPAN/ble/core/auto \
+Middlewares/ST/STM32_WPAN/ble/core/template \
+Middlewares/ST/STM32_WPAN/ble/svc/Src \
+Middlewares/ST/STM32_WPAN/interface/patterns/ble_thread/shci \
+Middlewares/ST/STM32_WPAN/interface/patterns/ble_thread/tl \
+Middlewares/ST/STM32_WPAN/utilities \
+STM32_WPAN/App \
+STM32_WPAN/Target \
+Utilities/lpm/tiny_lpm \
+Utilities/sequencer \
 

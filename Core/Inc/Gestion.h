@@ -24,7 +24,7 @@ void CalibrateAccelerometer(void);
 void CalibrateGyroscope(void);
 bool recordBenchRep(BenchRep *rep);
 bool compareBenchReps(BenchRep refRep, BenchRep newRep, int tolerance);
-int _write(int file, char *ptr, int len);
+int _write2(int file, char *ptr, int len);
 
 
 #endif /* INC_GESTION_H_ */
