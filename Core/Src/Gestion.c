@@ -30,9 +30,10 @@ BenchRep referenceMovement;
 BenchRep currentMovement;
 static int validMovements = 0;
 static int invalidMovements = 0;
+bool BLE_CheckNewExerciseSignal=true;
+bool BLE_CheckEndOfExerciseSignal=true;
 
-
-int _write2(int file, char *ptr, int len) {
+int _write(int file, char *ptr, int len) {
     int DataIdx;
     for (DataIdx = 0; DataIdx < len; DataIdx++) {
         ITM_SendChar(*ptr++);
@@ -52,42 +53,100 @@ void MX_MEMS_Init(void) {
     currentMovement.minAmplitudeZ = 0;
     currentMovement.duration = 0;
 }
+
+
 void MX_MEMS_Process(void) {
     // Réinitialisation des compteurs et de l'état
     validMovements = 0;
     invalidMovements = 0;
     isReferenceMovementRecorded = false;
+    bool isExerciseStarted = false;
+    bool isReferenceValidated = false;
+    bool exerciseEnded = false;
 
     while (true) {
-        if (!isReferenceMovementRecorded) {
+    	exerciseEnded = false;
+        // Attendre le signal de démarrage d'un nouvel exercice
+        if (!isExerciseStarted) {
+            if (BLE_CheckNewExerciseSignal) {
+                isExerciseStarted = true;
+                printf("Nouvel exercice détecté, préparation à l'enregistrement...\n");
+            }
+        }
+
+        if (isExerciseStarted && !isReferenceMovementRecorded) {
             printf("Enregistrement du mouvement de référence...\n");
             if (!recordBenchRep(&referenceMovement)) {
-                printf("Aucun mouvement de référence détecté, fin de la série.\n");
-                break; // Sortie si aucun mouvement n'est détecté dans le délai imparti
+                printf("Aucun mouvement de référence détecté, fin de la tentative.\n");
+                isExerciseStarted = false; // Réinitialiser pour un nouveau signal
+                continue;
             }
             isReferenceMovementRecorded = true;
             BLE_MVT_REF();
-            printf("Mouvement de référence enregistré.\n");
-        } else {
-            printf("Enregistrement d'une nouvelle répétition...\n");
+            printf("Mouvement de référence enregistré. En attente de validation...\n");
+        }
+
+        // Phase de validation du mouvement de référence
+        if (isReferenceMovementRecorded && !isReferenceValidated) {
+            printf("Enregistrement du mouvement pour validation...\n");
             if (!recordBenchRep(&currentMovement)) {
-                printf("Fin de la série détectée après 5 secondes d'inactivité.\n");
-                break; // Sortie si aucun nouveau mouvement n'est détecté dans le délai imparti
+                printf("Aucun mouvement détecté pour validation, veuillez réessayer.\n");
+                isReferenceMovementRecorded = false; // Demande de réenregistrer le mouvement de référence
+                continue;
             }
 
             if (compareBenchReps(referenceMovement, currentMovement, TOLERANCE)) {
-                validMovements++;
-                printf("Répétition valide.\n");
+                isReferenceValidated = true;
+                printf("Validation réussie. Commencement des répétitions.\n");
             } else {
-                invalidMovements++;
-                printf("Répétition non valide.\n");
+                printf("Validation échouée, veuillez réenregistrer le mouvement de référence.\n");
+                isReferenceMovementRecorded = false; // Réinitialiser pour enregistrer à nouveau le mouvement de référence
+                continue;
             }
         }
-    }
+        // Réinitialiser les compteurs pour une nouvelle série
+               validMovements = 0;
+               invalidMovements = 0;
 
-    // Affichage des résultats à la fin de la série
-    printf("Mouvements valides: %d, Mouvements non valides: %d\n", validMovements, invalidMovements);
-}
+               // Enregistrement des répétitions
+               while (!exerciseEnded) {
+                   printf("Enregistrement d'une nouvelle répétition...\n");
+                   if (!recordBenchRep(&currentMovement)) {
+                       printf("Fin de la série détectée après une période d'inactivité.\n");
+                       break;  // Sortir de la boucle interne si inactivité détectée
+                   }
+
+                   if (compareBenchReps(referenceMovement, currentMovement, TOLERANCE)) {
+                       validMovements++;
+                       printf("Répétition valide.\n");
+                   } else {
+                       invalidMovements++;
+                       printf("Répétition non valide.\n");
+                   }
+
+                   // Vérification de la notification de fin d'exercice
+                   if (BLE_CheckEndOfExerciseSignal) {
+                       exerciseEnded = true;
+                       printf("Fin de l'exercice détectée. Terminaison du programme.\n");
+                       validMovements = 0;
+                       invalidMovements = 0;
+                       isReferenceMovementRecorded = false;
+                      isExerciseStarted = false;
+                       isReferenceValidated = false;
+                       MX_MEMS_Init();
+
+                   }
+               }
+
+               // Affichage des résultats à la fin de la série
+               printf("Mouvements valides: %d, Mouvements non valides: %d\n", validMovements, invalidMovements);
+
+               // Si la fin de l'exercice n'a pas été signalée, recommencez une nouvelle série
+               if (!exerciseEnded) {
+                   printf("Préparation pour une nouvelle série...\n");
+               }
+           }
+       }
 
 
 
@@ -230,4 +289,3 @@ bool compareBenchReps(BenchRep refRep, BenchRep newRep, int tolerance) {
     }
     return false;
 }
-
